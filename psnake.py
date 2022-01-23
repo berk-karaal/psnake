@@ -3,10 +3,12 @@ import curses, random, time
 COLLISION_CODE = "collision"
 
 SNAKE_BODY = "#"
-HORIZONTAL_BORDER = "█"
-VERTICAL_BORDER = "█"
+BORDER = "█"
 FOOD = "■"
 PADDING = 0
+
+BORDER_LOOP = True
+BODY_CORNERS = True
 
 score = 0
 
@@ -39,7 +41,7 @@ def pause_game(scr: curses.window):
 
 
 def snake(scr: curses.window):
-
+    curses.cbreak()
     curses.use_default_colors()
     curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_WHITE)
     curses.init_pair(3, curses.COLOR_GREEN, -1)
@@ -57,11 +59,11 @@ def snake(scr: curses.window):
         scr.clear()
 
         ## draw borders
-        scr.addstr(0, 0, HORIZONTAL_BORDER * width)
-        scr.insstr(height - 1, 0, HORIZONTAL_BORDER * width)
+        scr.addstr(0, 0, BORDER * width)
+        scr.insstr(height - 1, 0, BORDER * width)
         for y_index in range(height):
-            scr.insstr(y_index, 0, VERTICAL_BORDER)
-            scr.insstr(y_index, width - 1, VERTICAL_BORDER)
+            scr.insstr(y_index, 0, BORDER)
+            scr.insstr(y_index, width - 1, BORDER)
 
         ## score text
         score_text = " Score: " + str(score)
@@ -95,18 +97,88 @@ def snake(scr: curses.window):
         elif direction == "down":
             body[0][1] += 1
 
+        corners = ["║", "╔", "═", "╗", "╝", "╚", "╬"]
+        corners = ["┃", "┏", "━", "┓", "┛", "┗", "╋"]
+
         ## draw snake
-        for x, y in body:
-            scr.delch(y, x)
-            scr.insstr(y, x, SNAKE_BODY)
+        for i, v in enumerate(body):
+            scr.delch(v[1], v[0])
+            if BODY_CORNERS:
+                if i == 0:
+                    scr.insstr(v[1], v[0], corners[-1])
+                elif i + 1 < len(body):
+                    next_part = body[i + 1]  # next body part
+                    prev_part = body[i - 1]  # previous body part
+                    if prev_part[0] == v[0]:
+                        if prev_part[1] > v[1]:
+                            if next_part[0] == v[0]:
+                                scr.insstr(v[1], v[0], corners[0])
+                            elif next_part[0] > v[0]:
+                                scr.insstr(v[1], v[0], corners[1])
+                            elif next_part[0] < v[0]:
+                                scr.insstr(v[1], v[0], corners[3])
+                        elif prev_part[1] < v[1]:
+                            if next_part[0] == v[0]:
+                                scr.insstr(v[1], v[0], corners[0])
+                            elif next_part[0] > v[0]:
+                                scr.insstr(v[1], v[0], corners[5])
+                            elif next_part[0] < v[0]:
+                                scr.insstr(v[1], v[0], corners[4])
+
+                    elif prev_part[1] == v[1]:
+                        if prev_part[0] < v[0]:
+                            if next_part[1] == v[1]:
+                                scr.insstr(v[1], v[0], corners[2])
+                            elif next_part[1] < v[1]:
+                                scr.insstr(v[1], v[0], corners[4])
+                            elif next_part[1] > v[1]:
+                                scr.insstr(v[1], v[0], corners[3])
+                        elif prev_part[0] > v[0]:
+                            if next_part[1] == v[1]:
+                                scr.insstr(v[1], v[0], corners[2])
+                            elif next_part[1] > v[1]:
+                                scr.insstr(v[1], v[0], corners[1])
+                            elif next_part[1] < v[1]:
+                                scr.insstr(v[1], v[0], corners[5])
+
+                else:
+                    if body[i - 1][1] == v[1]:
+                        if body[i - 1][0] < v[0]:
+                            scr.insstr(v[1], v[0], "╾")
+                        else:
+                            scr.insstr(v[1], v[0], "╼")
+                    else:
+                        if body[i - 1][1] < v[1]:
+                            scr.insstr(v[1], v[0], "╿")
+                        else:
+                            scr.insstr(v[1], v[0], "╽")
+
+            else:
+                scr.insstr(v[1], v[0], SNAKE_BODY)
 
         ## check collisions
         # it's body
         if body[0] in body[1:]:
             game_over(scr)
         # borders
-        if body[0][0] in [0, width - 1] or body[0][1] in [0, height - 1]:
-            game_over(scr)
+        elif body[0][0] in [0, width - 1] or body[0][1] in [0, height - 1]:
+            if BORDER_LOOP:
+                scr.delch(body[0][1], body[0][0])
+                scr.insstr(body[0][1], body[0][0], BORDER)
+
+                if body[0][0] == 0:
+                    body[0][0] = width - 2
+                elif body[0][0] == width - 1:
+                    body[0][0] = 1
+                elif body[0][1] == 0:
+                    body[0][1] = height - 2
+                elif body[0][1] == height - 1:
+                    body[0][1] = 1
+
+                scr.delch(body[0][1], body[0][0])
+                scr.insstr(body[0][1], body[0][0], SNAKE_BODY)
+            else:
+                game_over(scr)
         # food
         elif body[0] == food:
             score += 1
@@ -127,7 +199,8 @@ def snake(scr: curses.window):
         if inp == ord("p"):
             pause_game(scr)
 
-        time.sleep(0.1)
+        sleep_sec = 0.05
+        time.sleep(sleep_sec)
 
 
 if __name__ == "__main__":
