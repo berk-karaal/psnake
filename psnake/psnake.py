@@ -100,7 +100,7 @@ def snake(scr: curses.window):
         elif direction == "down":
             body[0][1] += 1
 
-        corners = ["║", "╔", "═", "╗", "╝", "╚", "╬"]
+        # corners = ["║", "╔", "═", "╗", "╝", "╚", "╬"]
         corners = ["┃", "┏", "━", "┓", "┛", "┗", "╋"]
 
         ## draw snake
