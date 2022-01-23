@@ -1,14 +1,14 @@
-import curses, random, time
+import curses, random, time, sys
 
-COLLISION_CODE = "collision"
+VERSION = "0.0.1"
 
-SNAKE_BODY = "#"
+SNAKE_BODY = ""
 BORDER = "█"
 FOOD = "■"
 PADDING = 0
 
-BORDER_LOOP = True
-BODY_CORNERS = True
+BORDER_LOOP = False
+SLEEP_SECONDS = 0.1
 
 score = 0
 
@@ -52,7 +52,10 @@ def snake(scr: curses.window):
     height, width = scr.getmaxyx()
     body = [[5, 5]]  # x and y position of snake's body, 1st element is head
     direction = "right"
-    food = [10, 10]  # food's x and y position
+    food = [
+        random.randint(1 + PADDING, width - 2 - PADDING),
+        random.randint(1 + PADDING, height - 2 - PADDING),
+    ]  # food's x and y position
     global score
 
     while True:
@@ -103,7 +106,7 @@ def snake(scr: curses.window):
         ## draw snake
         for i, v in enumerate(body):
             scr.delch(v[1], v[0])
-            if BODY_CORNERS:
+            if not SNAKE_BODY:
                 if i == 0:
                     scr.insstr(v[1], v[0], corners[-1])
                 elif i + 1 < len(body):
@@ -199,12 +202,49 @@ def snake(scr: curses.window):
         if inp == ord("p"):
             pause_game(scr)
 
-        sleep_sec = 0.05
+        sleep_sec = SLEEP_SECONDS
         time.sleep(sleep_sec)
 
 
-if __name__ == "__main__":
+HELP_TEXT = """psnake
+------
+-v --version : show version
+-h --help    : show this help text
+
+Game settings
+-l           : allow looping
+-p<int>      : padding for food(green box) (default 0)
+-s<char>     : snake's custom body
+-t<float>    : sleep seconds after every frame (default 0.1)
+
+Example:
+psnake -l
+psnake -p10 -l
+psnake -l -sX -p5
+"""
+
+
+def run():
     try:
-        code = curses.wrapper(snake)
+        argv = sys.argv
+        global BORDER_LOOP, PADDING, SNAKE_BODY, SLEEP_SECONDS
+        for arg in argv:
+            if arg[0] == "-" and arg[1] == "p":
+                PADDING = int(arg[2:] or 0)
+            elif arg[0] == "-" and arg[1] == "s":
+                SNAKE_BODY = arg[2] if len(arg) > 2 else "#"
+            elif arg[0] == "-" and arg[1] == "t":
+                SLEEP_SECONDS = float(arg[2:])
+            elif arg[0] == "-" and arg[1:] in ["h", "-help"]:
+                print(HELP_TEXT)
+                return
+            elif arg[0] == "-" and arg[1:] in ["v", "-version"]:
+                print(f"psnake {VERSION}")
+                return
+            elif arg[0] == "-":
+                BORDER_LOOP = "l" in arg
+
+        curses.wrapper(snake)
+
     except KeyboardInterrupt:
-        print("by")
+        pass
